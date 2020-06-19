@@ -1,0 +1,203 @@
+---
+title: "Comparando mecanismos para jukebox sociais"
+output:
+    html_document:
+    df_print: paged
+theme: sandstone
+author: "Kleber Tarcísio Oliveira Santos"
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(viridis)
+library(boot)
+library(broom)
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5)
+
+```
+
+```{r read }
+dados = read_csv(here::here("data/satisfacoes.csv"), 
+                 col_types = "cdcc") 
+
+glimpse(dados)
+```
+# INTERVALO DE CONFIANÇA
+
+Utilizaremos a seguinte função theta e as funções auxiliares
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+theta <- function(dados, n = 1:NROW(dados), cenarios = c()) {
+  if (length(cenarios) != 0)
+    dados <- filter(dados, scenario %in% cenarios)
+  
+  cenarios <- as.factor(dados$scenario) %>% levels()
+  
+  agrupado = dados %>%
+    slice(n) %>%
+    group_by(scenario) %>%
+    summarise(mean = mean(satisfaction), .groups = 'drop')
+  
+  
+  b = agrupado %>% filter(scenario == cenarios[1]) %>% pull(mean)
+  l = agrupado %>% filter(scenario == cenarios[2]) %>% pull(mean)
+  l - b
+}
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+addIntervaloConfianca <- function(ic, cenarios) {
+  data.frame(
+    base_scenario = cenarios[1],
+    cenarios = cenarios[2],
+    statistic = ic$statistic,
+    conf.low = ic$conf.low,
+    conf.high = ic$conf.high
+  )
+}
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+getIntervaloConfianca <- function(df, f, t) {
+  df %>%
+    filter(scenario %in% f) %>%
+    boot(statistic = t,
+         R = 4000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+}
+
+df_comp <- data.frame()
+```     
+# Início das comparações por Intervalo de Confiança
+O nível de satisfação está entre 1 e 5 em todas as comparações a seguir. O intervalo de confiança é 95%.
+
+# baseline x up/downvoting
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "up/downvoting")
+set.seed(1L)
+ic <- getIntervaloConfianca(dados, cenarios, theta)
+df_comp <- rbind(df_comp, addIntervaloConfianca(ic, cenarios))
+
+ic
+```  
+# baseline x skip
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "skip")
+set.seed(1L)
+ic <- getIntervaloConfianca(dados, cenarios, theta)
+df_comp <- rbind(df_comp, addIntervaloConfianca(ic, cenarios))
+
+ic
+```
+# baseline x combined
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "combined")
+set.seed(1L)
+ic <- getIntervaloConfianca(dados, cenarios, theta)
+df_comp <- rbind(df_comp, addIntervaloConfianca(ic, cenarios))
+
+ic
+``` 
+
+Na comparação baseline x skip, nós percebemos uma diferença média de 0.39, ou seja, ficou entre 0.06 e 0.72.
+
+Na comparação baseline x combined, nós percebemos uma diferença média de 1.91, ou seja, ficou entre 1.57 e 2.25.
+
+Na comparação baseline x up/downvoting, nós percebemos uma diferença média de 2.26, ou seja, ficou entre 1.94 e 2.57.
+
+
+
+# Teste de Hipótese
+Nesta segunda parte, repetiremos as mesmas comparações feitas anteriormente. Entretanto, utilizaremos Teste de Hipótese. Utilizaremos as seguintes funções auxiliares:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+theta_hip <- function(dados, cenarios = c()) {
+  if (length(cenarios) != 0)
+    dados <- filter(dados, scenario %in% cenarios)
+  
+  cenarios <- as.factor(dados$scenario) %>% levels()
+  
+  satisfacoes <- dados %>%
+    group_by(scenario) %>%
+    summarise(satisfacao = mean(satisfaction), .groups = 'drop')
+  
+  l <- satisfacoes %>% filter(scenario == cenarios[1]) %>% pull(satisfacao)
+  b <- satisfacoes %>% filter(scenario == cenarios[2]) %>% pull(satisfacao)
+  
+  b - l
+}
+``` 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+theta_emb <- function(d, cenarios = c()) {
+  if (length(cenarios) != 0)
+    d <- filter(d, scenario %in% cenarios)
+  
+  cenarios <- as.factor(d$scenario) %>% levels()
+  
+  satisfacoes <- d %>%
+    mutate(scenario_embaralhado = sample(scenario, n())) %>%
+    group_by(scenario_embaralhado) %>%
+    summarise(satisfacao = mean(satisfaction), .groups = 'drop')
+  
+  l <- satisfacoes %>% filter(scenario_embaralhado == cenarios[1]) %>% pull(satisfacao)
+  b <- satisfacoes %>% filter(scenario_embaralhado == cenarios[2]) %>% pull(satisfacao)
+  
+  b - l
+}
+``` 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+getGrafico <- function(diffs, theta_hipo, cenarios) {
+  tibble(diferenca = diffs) %>%
+    ggplot(aes(x = diferenca)) +
+    geom_histogram(binwidth = .1,
+                   fill = "green",
+                   color = "darkslateblue") +
+    geom_vline(xintercept = theta_hipo, color = "blue") +
+    geom_vline(xintercept = -theta_hipo, color = "blue") +
+    labs(title = paste(cenarios[1], cenarios[2], sep = "-")) +
+    scale_x_continuous(name = "Diferença") +
+    scale_y_continuous(name = "Votos")
+}
+``` 
+
+# Início das comparações por Teste de Hipótese
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "up/downvoting")
+set.seed(1L)
+th_bl_dv <- theta_hip(dados, cenarios = cenarios)
+diffs = replicate(4000,{theta_emb(dados, cenarios = cenarios)})
+getGrafico(diffs, th_bl_dv, cenarios)
+``` 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "skip")
+set.seed(1L)
+th_bl_sk <- theta_hip(dados, cenarios = cenarios)
+diffs = replicate(4000,{theta_emb(dados, cenarios = cenarios)})
+getGrafico(diffs, th_bl_sk, cenarios)
+``` 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+cenarios = c("baseline", "combined")
+set.seed(1L)
+th_bl_cb <- theta_hip(dados, cenarios = cenarios)
+diffs = replicate(4000,{theta_emb(dados, cenarios = cenarios)})
+getGrafico(diffs, th_bl_cb, cenarios)
+``` 
+
+Das 3 análises de Teste de Hipóteses acima apresentadas, apenas BaseLine x Skip está dentro da distribuição de diferença. Portanto, no caso BaseLine x Skip não podemos rejeitar a hipótese nula. Nas outras duas apresentações, há uma recomendação estatística para rejeitar a hipótese nula.
+
+# CONSIDERAÇÕES FINAIS
+
+Apesar dos resultados do Teste de Hipótese, não podemos afirmar com 100% de certeza que esse teste de hipótese reflete a realidade, pois poderíamos estar cometendo erros do Tipo I ou do Tipo II. No caso BaseLine x Skip podemos cometer um erro do Tipo II. Nos outros dois casos, podemos estar cometendo um erro do I.
+
+O cenário BaseLine x Skip estão parecidos tanto na análise do Intervalo de Confiança quanto na análise do Teste de Hipótese. As avaliações desses dois cenários foram as mais baixas.
