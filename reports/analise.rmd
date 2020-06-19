@@ -77,6 +77,7 @@ border = "green",
 horizontal = FALSE
 )
 ```
+
 Os boxplots acima nos dão uma clara ideia de que os cenários BaseLine e Skip concentram as suas satisfações com valor até 3. Por outro lado, o cenário up/downvoting possui apenas satisfações acima de 4. Apenas por esses dados, já podemos ter uma certa ideia de como os cenários estão classificados. Entretanto, ainda faremos duas avaliações: Intervalo de Confiança e Teste de Hipótese.
 
 # INTERVALO DE CONFIANÇA
@@ -254,3 +255,5 @@ Das 3 análises de Teste de Hipóteses acima apresentadas, apenas BaseLine x Ski
 Apesar dos resultados do Teste de Hipótese, não podemos afirmar com 100% de certeza que esse teste de hipótese reflete a realidade, pois poderíamos estar cometendo erros do Tipo I ou do Tipo II. No caso BaseLine x Skip podemos cometer um erro do Tipo II. Nos outros dois casos, podemos estar cometendo um erro do I.
 
 O cenário BaseLine x Skip estão parecidos tanto na análise do Intervalo de Confiança quanto na análise do Teste de Hipótese. As avaliações desses dois cenários foram as mais baixas.
+
+O cenário up/downvoting é o que possui as satisfações mais altas.
