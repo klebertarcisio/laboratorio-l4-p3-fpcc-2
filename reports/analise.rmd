@@ -26,6 +26,59 @@ dados = read_csv(here::here("data/satisfacoes.csv"),
 
 glimpse(dados)
 ```
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+baseLine <- filter(dados, scenario == "baseline")
+
+boxplot(baseLine$satisfaction,
+main = "Distribuição do cenário BaseLine",
+xlab = "Distribuição do cenário BaseLine",
+ylab = "Satisfação",
+col = "blue",
+border = "green",
+horizontal = FALSE
+)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+baseLine <- filter(dados, scenario == "skip")
+
+boxplot(baseLine$satisfaction,
+main = "Distribuição do cenário skip",
+xlab = "Distribuição do cenário skip",
+ylab = "Satisfação",
+col = "blue",
+border = "green",
+horizontal = FALSE
+)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+baseLine <- filter(dados, scenario == "combined")
+
+boxplot(baseLine$satisfaction,
+main = "Distribuição do cenário combined",
+xlab = "Distribuição do cenário combined",
+ylab = "Satisfação",
+col = "blue",
+border = "green",
+horizontal = FALSE
+)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+baseLine <- filter(dados, scenario == "up/downvoting")
+
+boxplot(baseLine$satisfaction,
+main = "Distribuição do cenário up/downvoting",
+xlab = "Distribuição do cenário up/downvoting",
+ylab = "Satisfação",
+col = "blue",
+border = "green",
+horizontal = FALSE
+)
+```
+Os boxplots acima nos dão uma clara ideia de que os cenários BaseLine e Skip concentram as suas satisfações com valor até 3. Por outro lado, o cenário up/downvoting possui apenas satisfações acima de 4. Apenas por esses dados, já podemos ter uma certa ideia de como os cenários estão classificados. Entretanto, ainda faremos duas avaliações: Intervalo de Confiança e Teste de Hipótese.
+
 # INTERVALO DE CONFIANÇA
 
 Utilizaremos a seguinte função theta e as funções auxiliares
